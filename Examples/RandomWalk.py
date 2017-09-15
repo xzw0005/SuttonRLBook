@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 numStates = 5   # number of non-absorbing states (B,C,D,E,F)
 states = np.arange(1, numStates+1)
 startState = numStates/2 + 1 # random walk starts from middle, D
-print states
-absorbingState = [0, numStates+1] # terminal states: A, G
+absorbingStates = [0, numStates+1] # terminal states: A, G
 
 actionLeft = 0
 actionRight = 1
@@ -19,7 +18,6 @@ actionRight = 1
 trueValues = np.zeros(numStates+2)
 trueValues[1:numStates+1] = np.arange(1, numStates+1) / float(numStates+1)
 trueValues[numStates+1] = 1
-print trueValues[1:-1]
     
 class TDlambda(object):
     '''
@@ -33,6 +31,7 @@ class TDlambda(object):
         self.alpha = alpha 
         self.gamma = gamma
         self.weights = np.zeros(numStates+2)
+        self.weights[-1] = 1.0
         self.newEpisode()
         
     def newEpisode(self):
@@ -41,8 +40,7 @@ class TDlambda(object):
         self.stateValue = 0.0
         
     def learn(self, state, reward):
-#        self.eligibility *= self.lamb
-        self.eligibility *= (self.lamb * self.gamma)
+#         self.eligibility *= (self.lamb * self.gamma)
         self.eligibility[self.lastState] += 1
         delta = reward + self.weights[state] * self.gamma - self.weights[self.lastState]
         delta *= self.alpha
@@ -54,19 +52,23 @@ class TDlambda(object):
 def randomWalk(valueFunction):
     valueFunction.newEpisode()
     currentState = startState
-    while currentState not in absorbingState:
+    trajectory = [currentState]
+    rewardSequence = [0]
+    while currentState not in absorbingStates:
         if np.random.binomial(1, 0.5) == actionLeft:
             newState = currentState - 1
         else:
             newState = currentState + 1
-        if newState == 0:
-            reward = -1
-        elif newState == numStates + 1:
-            reward = 1
-        else:
-            reward = 0
+        reward = 0
+#         if newState == numStates + 1:
+#             reward = 1.
+#         else:
+#             reward = 0.
         valueFunction.learn(newState, reward)
         currentState = newState
+        trajectory.append(currentState)
+        rewardSequence.append(reward)
+    return trajectory, rewardSequence
         
 def rmsError(lambdas, alphas, episodes=10, runs=100):
     errors = [np.zeros(len(alphas_)) for alphas_ in alphas]

@@ -40,9 +40,9 @@ class TD(object):
     def learn(self, state, reward):
         return
     
-def randomWalk(td):
-    td.newEpisode()
-    currentState = td.lastState
+def randomWalk():
+    currentState = startState
+    trajectory=[currentState]
     while currentState not in absorbingState:
         if np.random.binomial(1, 0.5) == actionLeft:
             newState = currentState - 1
@@ -54,5 +54,27 @@ def randomWalk(td):
             reward = 1
         else:
             reward = 0
-        td.learn(newState, reward)
         currentState = newState
+        trajectory.append(currentState)
+        
+def main():
+    numStates = 7
+    startState = numStates/2 +1
+    states = np.arange(1, numStates-1)
+    absorbingState = [0, numStates-1]
+    
+    actionLeft = 0
+    actionRight = 1
+    
+    trueValues = np.zeros(numStates)
+    trueValues[1:numStates-1] = np.arange(1, numStates-1) / float(numStates-1)
+    trueValues[numStates-1] = 1
+    
+    lambs = [0.0, 0.1, 0.3, 0.5,  0.7,  0.9, 1.0]
+    alphas = np.arange(0, .65, .05)    
+    
+    for alpha in alphas:
+    
+    
+    errors = np.zeros(len(lambs))
+    
