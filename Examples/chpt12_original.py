@@ -188,7 +188,7 @@ def figure12(valueFunctionGenerator, runs, lambdas, alphas):
             for alphaIndex, alpha in zip(range(len(alphas[lambdaIndex])), alphas[lambdaIndex]):
                 valueFunction = valueFunctionGenerator(rate, alpha)
                 for episode in range(episodes):
-                    print('run:', run, 'lambda:', rate, 'alpha:', alpha, 'episode:', episode)
+                    #print('run:', run, 'lambda:', rate, 'alpha:', alpha, 'episode:', episode)
                     randomWalk(valueFunction)
                     stateValues = [valueFunction.value(state) for state in states]
                     errors[lambdaIndex][alphaIndex] += np.sqrt(np.mean(np.power(stateValues - realStateValues[1: -1], 2)))
@@ -199,32 +199,38 @@ def figure12(valueFunctionGenerator, runs, lambdas, alphas):
     plt.figure(figureIndex)
     figureIndex += 1
     for i in range(len(lambdas)):
-        plt.plot(alphas[i], errors[i], label='lambda = ' + str(lambdas[i]))
+        plt.plot(alphas[i], errors[i], label=r'$\lambda = $' + str(lambdas[i]))
     plt.xlabel('alpha')
     plt.ylabel('RMS error')
     plt.legend()
+#     plt.ylim(0, .75)
 
 # Figure 12.3: Off-line lambda-return algorithm
 def figure12_3():
+    lambdas = [0., .3, .8, 1.]
+    alphas = [np.arange(0, 0.65, 0.05),
+              np.arange(0, 0.65, 0.05),
+              np.arange(0, 0.65, 0.05),
+              np.arange(0, 0.65, 0.05)]
+    figure12(OffLineLambdaReturn, 100, lambdas, alphas)
+
+# Figure 12.6: TD(lambda) algorithm
+def figure12_6():
+#     lambdas = [0.0, 0.4, 0.8, 0.9, 0.95, 0.975, 0.99, 1]
+#     alphas = [np.arange(0, 1.1, 0.1),
+#               np.arange(0, 1.1, 0.1),
+#               np.arange(0, 0.99, 0.09),
+#               np.arange(0, 0.55, 0.05),
+#               np.arange(0, 0.33, 0.03),
+#               np.arange(0, 0.22, 0.02),
+#               np.arange(0, 0.11, 0.01),
+#               np.arange(0, 0.044, 0.004)]
     lambdas = [0, 0.3, 0.8, 1]
     alphas = [np.arange(0, 0.65, 0.05),
               np.arange(0, 0.65, 0.05),
               np.arange(0, 0.65, 0.05),
               np.arange(0, 0.45, 0.05)]
-    figure12(OffLineLambdaReturn, 100, lambdas, alphas)
-
-# Figure 12.6: TD(lambda) algorithm
-def figure12_6():
-    lambdas = [0.0, 0.4, 0.8, 0.9, 0.95, 0.975, 0.99, 1]
-    alphas = [np.arange(0, 1.1, 0.1),
-              np.arange(0, 1.1, 0.1),
-              np.arange(0, 0.99, 0.09),
-              np.arange(0, 0.55, 0.05),
-              np.arange(0, 0.33, 0.03),
-              np.arange(0, 0.22, 0.02),
-              np.arange(0, 0.11, 0.01),
-              np.arange(0, 0.044, 0.004)]
-    figure12(TemporalDifferenceLambda, 50, lambdas, alphas)
+    figure12(TemporalDifferenceLambda, 100, lambdas, alphas)
 
 # Figure 12.7: True online TD(lambda) algorithm
 def figure12_7():

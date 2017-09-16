@@ -48,18 +48,18 @@ def getHistory(episodes=10, runs=100):
         history.append((trajectories, rewards))
     return history
 
-def TdLambda(lamb, alpha, episodes=10, runs=100):
+def TdLambdaOnline(lamb, alpha, episodes=10, runs=100):
     errors = []
     for run in range(runs):
-        W = np.copy(values)
-        trajectories = []
-        rewards = []        
+        W = np.copy(values)     
         for ep in range(episodes):
             eligibility = np.zeros(numStates+2)
             dw = np.zeros(numStates+2)
-            trajectory, reward = RandomWalk(W, lamb, alpha)
-            rewardSequence = [0] * len(trajectory)
+            trajectory, reward = RandomWalk()
+            rewardSequence = [0] * (len(trajectory))
             rewardSequence[-1] = reward
+#             print trajectory
+#             print rewardSequence
             for t in range(len(trajectory) - 1):
                 s = trajectory[t]
                 sp = trajectory[t+1]
@@ -69,10 +69,104 @@ def TdLambda(lamb, alpha, episodes=10, runs=100):
                 dw[s] += (Rt + W[sp] - W[s])
             dw *= alpha
             dw = np.multiply(dw, eligibility)
-            W += dw    
-        rmse = np.sqrt(np.sum((trueValues-W)**2) / numStates)
+            W += dw
+        rmse = np.sqrt(np.sum(np.power(trueValues[1:-1]-W[1:-1], 2)) / numStates)
         errors.append(rmse)
     return np.mean(errors), np.std(errors)
-        
-        
 
+def TdLambdaOffline(history, lamb, alpha):
+    errors = []
+    for trajectories, rewards in history:   # iterates over each run
+#         print '###################################'
+        W = np.copy(values)
+        for i in range(len(trajectories)):  # iterates over each episode
+#             print '    ------------------------'
+            eligibility = np.zeros(numStates+2)
+            dw = np.zeros(numStates+2)
+            trajectory = trajectories[i]
+#             reward = rewards[i]
+#             rewardSequence = [0] * (len(trajectory))
+#             rewardSequence[-1] = reward
+            for t in range(len(trajectory) - 1):
+                s = trajectory[t]
+                sp = trajectory[t+1]
+                if sp == absorbingStates[1]:
+                    R = 1
+                else:
+                    R = 0
+                eligibility *= lamb 
+                eligibility[s] += 1
+                dw[s] += (R + W[sp] - W[s])
+                dw *= alpha
+                dw = np.multiply(dw, eligibility)
+                W += dw
+#             print W
+        rmse = np.sqrt(np.sum(np.power(trueValues[1:-1]-W[1:-1], 2)) / numStates)
+        errors.append(rmse)
+    return np.mean(errors), np.std(errors)    
+
+def TdLambdaP(history, lamb, alpha):
+    errors = []
+    for trajectories, rewards in history:           # iterates over each run
+        print '###################################'
+        W = np.copy(values)
+        for i in range(len(trajectories)):          # iterates over each episode
+            print '    ------------------------'
+            dw = np.zeros(numStates + 2)
+            trajectory = trajectories[i]
+            reward = rewards[i]
+            eligibility = np.zeros(numStates+2)
+            for t in range(len(trajectory) - 1):    # iterates over time in each trajectory
+                s = trajectory[t]
+                x = np.zeros(numStates+2)
+                x[s] = 1
+                p = np.sum(np.multiply(W, x))
+                sNext = trajectory[t+1]
+                if sNext == absorbingStates[0]:
+                    pNext = 0
+                elif sNext == absorbingStates[1]:
+                    pNext = 1
+                else:
+                    xNext = np.zeros(numStates+2)
+                    xNext[sNext] = 1
+                    pNext = np.sum(np.multiply(W, xNext))
+                eligibility *= lamb 
+                eligibility += xNext     
+                dw += (pNext - p)*eligibility
+            W += dw
+            print W
+        rmse = np.sqrt(np.sum(np.power(trueValues[1:-1]-W[1:-1], 2)) / numStates)
+        errors.append(rmse)
+    return np.mean(errors), np.std(errors)           
+
+def figure4():
+    history = getHistory()
+    lambFig4 = [0., .3, .8, 1.]
+    lambdas = [0., .1, .2, .3, .4, .5, .6, .7, .8, .9, 1.]
+#     lambdas = [.3]
+    alphas = np.arange(0, .65, .05)
+    errBestAlpha = []
+#     alphas = [np.arange(0, .65, .05)] * (len(lambdas) - 1)
+#     alphas.append(np.arange(0, .6, .1))
+    plt.figure(4)
+    for lamb in lambdas:
+        errors = [] 
+        for alpha in alphas:
+            err, sd = TdLambdaOffline(history, lamb, alpha)
+#             err, sd = TdLambdaP(history, lamb, alpha)
+            errors.append(err)
+        errBestAlpha.append(min(errors))
+        print '$\lambda=$', lamb, ', RMSEs: ', errors
+        if lamb in lambFig4:
+            plt.plot(alphas, errors, '-o', label=r'$\lambda=$'+str(lamb))
+    plt.xlabel(r'$\alpha$')
+    plt.ylabel('RMS error')
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.show()
+    plt.figure(5)
+    plt.plot(lambdas, errBestAlpha, '-o')
+    plt.xlabel(r'$\lambda$')
+    plt.ylabel(r'Error Using Best $\alpha$')
+    plt.show()
+figure4()
