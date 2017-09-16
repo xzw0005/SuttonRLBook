@@ -39,10 +39,32 @@ def td(values, alpha, batch=False):
 #             reward = 0.0
         if not batch:
             values[currentState] += alpha * (reward + values[newState] - values[currentState])
+            # do not need to return values, since list is mutable
         currentState = newState
         trajectory.append(currentState)
         rewardSequence.append(reward)
     return trajectory, rewardSequence
+
+def mc(values, alpha, batch=False):
+    currentState = startState
+    trajectory = [currentState]
+    while currentState not in absorbingStates:
+        action =np.random.binomial(1, 0.5)
+        if action == goLeft:
+            newState = currentState - 1 
+        else:
+            newState = currentState + 1
+        if newState == absorbingStates[0]:
+            returns = 0.0
+        elif newState == absorbingStates[1]:
+            returns = 1.0
+        currentState = newState
+        trajectory.append(currentState)
+    if not batch:
+        for state in trajectory[0:-1]:
+            values[state] += alpha * (returns - values[state])
+            # do not need to return values, since list is mutable
+    return trajectory, [returns] * (len(trajectory) - 1)
 
 def rmseTD(alpha, episodes, runs):
     #xAxis = np.arange(episodes)
@@ -58,9 +80,18 @@ def rmseTD(alpha, episodes, runs):
             td(weights, alpha)
         totalErrors += np.asarray(errors)
     return totalErrors / runs
-            
-            
-    
+
+def rmseMC(alpha, episodes, runs):
+    totalErrors = np.zeros(episodes)
+    for run in range(runs):
+        errors = []
+        weights = np.copy(values)
+        for i in range(episodes):
+            rmse = np.sqrt(np.sum((trueValues-weights)**2) / numStates)
+            errors.append(rmse)
+            mc(weights, alpha)
+        totalErrors += np.asarray(errors)
+    return totalErrors / runs 
 
 def td_batch(alpha, episodes=100, runs=100):
     totalErrors = np.zeros(episodes)
@@ -70,26 +101,53 @@ def td_batch(alpha, episodes=100, runs=100):
         history = []
         rewards = []
         for ep in range(episodes):
-            print 'run: ', run, ' episode: ', ep
-            trajectory, rewardSequence = td(weights, alpha=0.01, batch=True)
+#             print 'run: ', run, ' episode: ', ep
+            trajectory, rewardSequence = td(weights, alpha, batch=True)
             history.append(trajectory)
             rewards.append(rewardSequence)
             converged = False
             while not converged:
-                updates = np.zeros(numStates+2)
+                deltas = np.zeros(numStates+2)
                 for trajectory, rewardSequence in zip(history, rewards):
                     for i in range(len(trajectory)-1):
-                        updates[trajectory[i]] += rewardSequence[i] + weights[trajectory[i+1]] - weights[trajectory[i]]
-                updates *= alpha
-                if np.sum(np.abs(updates)) < 1e-3:
+                        deltas[trajectory[i]] += rewardSequence[i] + weights[trajectory[i+1]] - weights[trajectory[i]]
+                deltas *= alpha
+                if np.sum(np.abs(deltas)) < 1e-3:
                     converged = True
-                weights += updates
+                weights += deltas
             sqErr = np.power(trueValues - weights, 2)
             mse = np.sum(sqErr) / numStates
             rmse = np.sqrt(mse)
             errors.append(rmse)
         totalErrors += np.asarray(errors)
     return totalErrors / runs
+
+def mc_batch(alpha, episodes=100, runs=100):
+    totalErrors = np.zeros(episodes)
+    for run in range(runs):
+        errors = []
+        W = np.copy(values)
+        history = []
+        rewards = []
+        for ep in range(episodes):
+            trajectory, Gs = mc(W, alpha = 0.01, batch = True)
+            history.append(trajectory)
+            rewards.append(Gs)
+            converged = False
+            while not converged:
+                dw = np.zeros(numStates + 2)
+                for trajectory, Gs in zip(history, rewards):
+                    for i in range(len(trajectory)-1):
+                        dw[trajectory[i]] += Gs[i] - W[trajectory[i]]
+                dw *= alpha
+                if np.sum(np.abs(dw)) < 1e-3:
+                    converged = True
+                W += dw
+            rmse = np.sqrt(np.sum((trueValues - W) ** 2) / numStates)
+            errors.append(rmse)
+        totalErrors += np.asarray(errors)
+    return totalErrors / runs
+            
 
 def figure6_2a():
     episodes = [0, 1, 10, 100, 1000]
@@ -107,6 +165,7 @@ def figure6_2a():
     
 def figure6_2b():
     alphas_td = [.05, .1, .15]
+    alphas_mc = [.01, .02,.03,.04]
     episodes = 101
     runs = 100
     plt.figure(2)
@@ -114,19 +173,31 @@ def figure6_2b():
     for alpha in alphas_td:
         rmse = rmseTD(alpha, episodes, runs)
         plt.plot(xAxis, rmse, label=r'TD, $\alpha=$'+str(alpha))
+    for alpha in alphas_mc:
+        rmse = rmseMC(alpha, episodes, runs)
+        plt.plot(xAxis, rmse, '--', label=r'MC, $\alpha=$'+str(alpha))
+    plt.xlabel('episodes')
+    plt.xlim(0, episodes-1)
     plt.legend()
     plt.show()
     
 def figure6_3():
-    episodes = 100
-    batchTD = td_batch(.001, episodes)
+    alpha = .001
+    episodes = 101
+    runs = 100
+    batchTD = td_batch(alpha, episodes, runs)
+    batchMC = mc_batch(alpha, episodes, runs)
     xAxis = np.arange(episodes)
     plt.figure(3)
     plt.plot(xAxis, batchTD, label='TD')
+    plt.plot(xAxis, batchMC, label='MC')
     plt.xlabel('episodes')
     plt.ylabel('RMS error')
+    plt.xlim(1, episodes)
+#     plt.ylim(0, .25)
+    plt.legend()
     plt.show()
     
-#figure6_2a()
-#figure6_2b()
+# figure6_2a()
+# figure6_2b()
 figure6_3()
