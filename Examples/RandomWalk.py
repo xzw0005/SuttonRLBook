@@ -60,10 +60,10 @@ def randomWalk(valueFunction):
         else:
             newState = currentState + 1
         reward = 0
-#         if newState == numStates + 1:
-#             reward = 1.
-#         else:
-#             reward = 0.
+        if newState == numStates + 1:
+            reward = 1.
+        else:
+            reward = 0.
         valueFunction.learn(newState, reward)
         currentState = newState
         trajectory.append(currentState)

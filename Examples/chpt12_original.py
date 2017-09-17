@@ -245,7 +245,7 @@ def figure12_7():
               np.arange(0, 0.11, 0.01)]
     figure12(TrueOnlineTemporalDifferenceLambda, 50, lambdas, alphas)
 
-figure12_3()
+figure12_6()
 # figure12_6()
 # figure12_7()
 plt.show()
