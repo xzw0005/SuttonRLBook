@@ -224,7 +224,7 @@ def figures():
 #     plt.plot(lambdas, errBestAlpha, '-o')
 #     plt.xlabel(r'$\lambda$')
 #     plt.ylabel(r'Error Using Best $\alpha$')
-#     plt.title("Figure 3 in Sutton(1988)")
+# #     plt.title("Figure 3 in Sutton(1988)")
 #     plt.show()
 
     
